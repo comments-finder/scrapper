@@ -102,3 +102,8 @@ dist
 
 # TernJS port file
 .tern-port
+<<<<<<< HEAD
+=======
+
+.idea/
+>>>>>>> 872ebca (Init commit)
