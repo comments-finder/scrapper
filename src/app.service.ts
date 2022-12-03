@@ -1,27 +1,43 @@
-import {Injectable} from '@nestjs/common';
-import {DouParserService} from "./parsers/dou.service";
+import { Injectable, Logger} from '@nestjs/common';
 import {InjectModel} from "@nestjs/mongoose";
 import {Model} from "mongoose";
 import {ArticleComment, ArticleCommentDocument} from "./schemas/articleComments.schema";
+import {DouParserService} from "./parsers/dou.service";
+import {Cron} from "@nestjs/schedule";
+import {AmqpConnection} from "@golevelup/nestjs-rabbitmq";
+
+
+interface ArticleComments {
+    articleLink: string;
+    comments: string[];
+}
+
+interface ArticleCommentsResult {
+    comments: ArticleComments[];
+    errors: Error[];
+}
 
 @Injectable()
 export class AppService {
-  constructor(private readonly douParserService: DouParserService, @InjectModel(ArticleComment.name) private articleCommentModel: Model<ArticleCommentDocument>) {}
+    private inProgress = false;
+  private readonly logger = new Logger(AppService.name);
 
-  async getHello () {
-    const articlesLinks = await this.douParserService.getArticlesLinks();
+  constructor(
+      private readonly douParserService: DouParserService,
+      @InjectModel(ArticleComment.name) private articleCommentModel: Model<ArticleCommentDocument>,
+      private readonly amqpConnection: AmqpConnection,
+  ) {}
 
-    const result = await Promise.allSettled(articlesLinks.map(link => this.douParserService.getArticleComments(link)));
-
+  private parseArticlesCommentsFromPromises(articlesCommentsResults, articlesLinks): ArticleCommentsResult {
     const errors = [];
 
-    const articlesComments = result.reduce((prev, next, index) => {
+    const comments = articlesCommentsResults.reduce((prev, next, index) => {
       const articleLink = articlesLinks[index];
 
       if (next.status === 'fulfilled') {
         const data = (next as PromiseFulfilledResult<string[]>).value;
 
-        return [...prev, ...data.map(item => ({text: item, articleLink}))]
+        return [...prev, { articleLink, comments: data }]
       }
 
       errors.push({ articleLink, next });
@@ -29,18 +45,119 @@ export class AppService {
       return prev;
     }, []);
 
-
-    console.log('======errors', errors);
-
-    try {
-      const dbRes = await this.articleCommentModel.insertMany(articlesComments, { ordered: false });
-      console.log('=======dbRes', dbRes)
-    } catch (e) {
-      console.log(e);
-    }
+    return { errors, comments }
   }
 
-  async getAllComments(): Promise<ArticleComment[]> {
-    return this.articleCommentModel.find().exec();
+    private async getDouArticlesCommentsInParallel(articlesLinks: string[]): Promise<ArticleCommentsResult> {
+        const articlesCommentsPromises = articlesLinks.map(link => this.douParserService.getArticleComments(link));
+        const articlesCommentsResults = await Promise.allSettled(articlesCommentsPromises);
+
+        return this.parseArticlesCommentsFromPromises(articlesCommentsResults, articlesLinks);
+    }
+
+  private async getDouArticlesCommentsConsec(articlesLinks: string[]): Promise<ArticleCommentsResult> {
+      const comments: ArticleComments[] = [];
+      let errors = [];
+
+      for (const link of articlesLinks) {
+          try {
+              const res = await this.douParserService.getArticleComments(link);
+
+              comments.push({ articleLink: link, comments: res });
+          } catch (e) {
+              errors.push(e);
+          }
+      }
+
+      return { comments, errors }
+  }
+
+    private mapArticleCommentsToDTOs(articlesComments: ArticleComments[]): ArticleComment[] {
+        return articlesComments.flatMap(articleComments => articleComments.comments.map(comment => ({ text: comment, articleLink: articleComments.articleLink})))
+    }
+
+  private async saveComments(comments: ArticleComments[]) {
+      const commentsDTOs = this.mapArticleCommentsToDTOs(comments);
+
+      let insertedDocsResult;
+
+      try {
+          const dbRes = await this.articleCommentModel.insertMany(commentsDTOs, { ordered: false, rawResult: false });
+
+          this.logger.log(`Inserted in DB: ${dbRes?.length}`);
+
+          insertedDocsResult = dbRes;
+      } catch (e) {
+          const { writeErrors, insertedDocs } = e;
+          this.logger.log(`Failed to insert in DB: ${writeErrors?.length}`);
+          this.logger.log(`Inserted in DB: ${insertedDocs?.length}`);
+
+          insertedDocsResult = insertedDocs;
+      }
+
+      return insertedDocsResult;
+  }
+
+  private async getDouArticlesComments() {
+      const articlesLinks = await this.douParserService.getArticlesLinks();
+
+      return await this.getDouArticlesCommentsConsec(articlesLinks);
+  }
+
+  @Cron('*/1 * * * *')
+  async parse () {
+      try {
+          if (this.inProgress) {
+              return this.logger.log('Skip parsing due to the it\'s in progress!');
+          }
+
+          this.logger.log('Start parse!');
+
+          this.inProgress = true;
+
+          const { errors, comments } = await this.getDouArticlesComments();
+
+          this.logger.log(`Failed to fetch comments from ${errors?.length} articles`);
+          this.logger.log(`Fetched comments from ${comments?.length} articles`);
+
+          this.inProgress = false;
+
+          const insertedDocsResult = await this.saveComments(comments);
+
+          if (!insertedDocsResult.length) return;
+
+          const res = await this.amqpConnection.request<any>({
+              exchange: 'comments',
+              routingKey: 'new-comments',
+              payload: JSON.stringify(insertedDocsResult || []),
+              timeout: 10000,
+          });
+
+          this.logger.log(res);
+      } catch (e) {
+          this.inProgress = false;
+          throw e;
+      }
+  }
+
+  async sendAllComments() {
+      const comments = await this.articleCommentModel.find().exec();
+
+      const res = await this.amqpConnection.request<any>({
+          exchange: 'comments',
+          routingKey: 'new-comments',
+          payload: JSON.stringify(comments || []),
+          timeout: 10000,
+      });
+
+      this.logger.log(res);
+  }
+
+  async onApplicationBootstrap() {
+      try {
+          await this.sendAllComments();
+      } catch (e) {
+          this.logger.error(e, e.stack);
+      }
   }
 }

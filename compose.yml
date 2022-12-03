@@ -1,15 +1,37 @@
 services:
-  server:
-    container_name: scrapper_server
-    init: true
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.5.2
+    container_name: elasticsearch
     ports:
-      - "3000:3000"
-    build:
-      context: .
+      - 9200:9200
+      - 9300:9300
     environment:
-      - DB_URI=mongodb://scrapper:123456@db:27017/scrapper
-    depends_on:
-      - db
+      - xpack.security.enabled=false
+      - discovery.type=single-node
+    cap_add:
+      - IPC_LOCK
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    networks:
+      - elasticsearch
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: 'rabbitmq'
+    ports:
+      - 5672:5672
+      - 15672:15672
+    volumes:
+      - rabbitmq_persistence_data:/var/lib/rabbitmq/
+      - rabbitmq_persistence_log:/var/log/rabbitmq
+    networks:
+      - rabbitmq
   db:
     image: mongo:4.4.6
     container_name: scrapper_db
@@ -22,6 +44,45 @@ services:
     volumes:
       - mongodb_data_container:/data/db
       - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    networks:
+      - db
+#  scrapper:
+#    container_name: scrapper_server
+#    init: true
+#    ports:
+#      - "3000:3000"
+#    build:
+#      context: .
+#    environment:
+#      - DB_URI=mongodb://scrapper:123456@db:27017/scrapper
+#    depends_on:
+#      - db
+#      - rabbitmq
+#    networks:
+#      - rabbitmq
+#      - db
+  search:
+    container_name: search_server
+    build:
+      context: ../search
+    depends_on:
+      - rabbitmq
+      - elasticsearch
+      - db
+    networks:
+      - rabbitmq
+      - elasticsearch
 
 volumes:
   mongodb_data_container:
+  rabbitmq_persistence_data:
+  rabbitmq_persistence_log:
+  elasticsearch_data:
+
+networks:
+  db:
+    driver: bridge
+  rabbitmq:
+    driver: bridge
+  elasticsearch:
+    driver: bridge

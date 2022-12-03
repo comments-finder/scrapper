@@ -1,5 +1,7 @@
 import {Inject, Module} from '@nestjs/common';
-import puppeteer, {Browser} from 'puppeteer';
+import puppeteer from 'puppeteer-extra';
+import {Browser, executablePath} from 'puppeteer';
+const StealthPlugin = require('puppeteer-extra-plugin-stealth')
 
 export const BROWSER = 'browser';
 
@@ -8,18 +10,51 @@ export const BROWSER = 'browser';
   providers: [{
     provide: BROWSER,
     useFactory: async () => {
+      puppeteer.use(StealthPlugin());
+
       const browser = await puppeteer.launch({
         headless: true,
+        executablePath: executablePath(),
+        ignoreHTTPSErrors: true,
         args: [
           '--shm-size=3gb',
           '--no-sandbox',
           '--disable-setuid-sandbox',
           '--disable-dev-shm-usage',
           '--disable-web-security',
+            '--start-maximized',
+          // `--proxy-server=${oldProxyUrl}`,
         ]
       });
 
-      return browser;
+      const newPageOrig = browser.newPage;
+
+      const enrichBrowser = Object.assign(browser, {
+        newPage: async () => {
+          const page = await newPageOrig.call(browser);
+
+          const gotoOrig = page.goto;
+
+          return Object.assign(page, {
+            goto: async (url: string) => {
+              await gotoOrig.call(page, `https://api.zenrows.com/v1/?apikey=6556ac0bcde9434cc31be4153e26e2a22482ceb7&url=${encodeURIComponent(url)}`);
+
+              const pre = await page.$('pre');
+
+              const content = await pre.evaluate(elem => elem.textContent);
+
+              await page.evaluate((content) => {
+                javascript:document.open('text/html');
+                document.write(content);
+                document.close();
+
+              }, content)
+            }
+          })
+        }
+      });
+
+      return enrichBrowser;
     },
   }],
 })

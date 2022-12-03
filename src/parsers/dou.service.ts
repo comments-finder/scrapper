@@ -1,40 +1,65 @@
 import {Parser} from "./types";
 import {Injectable} from "@nestjs/common";
+import {DEFAULT_TIMEOUT, NAVIGATION_TIMEOUT} from "../config";
 
 @Injectable()
 export class DouParserService extends Parser {
     async getArticleComments(link) {
-
         const page = await this.browser.newPage();
 
-        await page.goto(link);
+        try {
+            page.setDefaultTimeout(DEFAULT_TIMEOUT);
+            page.setDefaultNavigationTimeout(NAVIGATION_TIMEOUT);
 
-        await page.waitForSelector('#commentsList > .b-comment');
+            await page.goto(link);
 
-        const res = await page.evaluate(resultsSelector => {
-            return [...document.querySelectorAll(resultsSelector)].map(item => {
-                return item.textContent;
-            });
-        }, '#commentsList > .b-comment .comment_text > p');
+            await page.waitForSelector('#commentsList > .b-comment');
 
-        await page.close();
+            const res = await page.evaluate(resultsSelector => {
+                return [...document.querySelectorAll(resultsSelector)].map(item => {
+                    return item.textContent;
+                });
+            }, '#commentsList > .b-comment .comment_text > p');
 
-        return res
+            await page.close();
+
+            return res
+        } catch (e) {
+            await page.close();
+            throw e;
+        }
     }
     async getArticlesLinks() {
         const page = await this.browser.newPage();
-        await page.goto('https://dou.ua/forums/');
-        await page.waitForSelector('.b-forum-articles > article');
 
-        const res = await page.evaluate(resultsSelector => {
-          return [...document.querySelectorAll(resultsSelector)].map(anchor => {
-            return anchor.getAttribute('href');
-          });
-        }, '.b-forum-articles > article h2 > a:first-child');
+        try {
+            page.setDefaultTimeout(DEFAULT_TIMEOUT);
+            page.setDefaultNavigationTimeout(NAVIGATION_TIMEOUT);
+
+            await page.evaluateOnNewDocument(() =>
+                Object.defineProperty(navigator, 'platform', {
+                    get: function () {
+                        return 'MacIntel';
+                    },
+                })
+            );
+
+            await page.goto('https://dou.ua/forums/');
+            await page.waitForSelector('.b-forum-articles > article');
+
+            const res = await page.evaluate(resultsSelector => {
+                return [...document.querySelectorAll(resultsSelector)].map(anchor => {
+                    return anchor.getAttribute('href');
+                });
+            }, '.b-forum-articles > article h2 > a:first-child');
 
 
-        await page.close();
+            await page.close();
 
-        return res;
+            return res;
+        } catch (e) {
+            await page.close();
+            throw e;
+        }
     }
 }
