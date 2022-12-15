@@ -5,6 +5,7 @@ import {ArticleComment, ArticleCommentDocument} from "./schemas/articleComments.
 import {DouParserService} from "./parsers/dou.service";
 import {Cron} from "@nestjs/schedule";
 import {AmqpConnection} from "@golevelup/nestjs-rabbitmq";
+import {AMQP_TIMEOUT} from "./config";
 
 
 interface ArticleComments {
@@ -48,7 +49,7 @@ export class AppService {
     return { errors, comments }
   }
 
-    private async getDouArticlesCommentsInParallel(articlesLinks: string[]): Promise<ArticleCommentsResult> {
+  private async getDouArticlesCommentsInParallel(articlesLinks: string[]): Promise<ArticleCommentsResult> {
         const articlesCommentsPromises = articlesLinks.map(link => this.douParserService.getArticleComments(link));
         const articlesCommentsResults = await Promise.allSettled(articlesCommentsPromises);
 
@@ -130,13 +131,13 @@ export class AppService {
               exchange: 'comments',
               routingKey: 'new-comments',
               payload: JSON.stringify(insertedDocsResult || []),
-              timeout: 10000,
+              timeout: AMQP_TIMEOUT,
           });
 
           this.logger.log(res);
       } catch (e) {
           this.inProgress = false;
-          throw e;
+          this.logger.error(e, e.stack);
       }
   }
 
@@ -147,7 +148,7 @@ export class AppService {
           exchange: 'comments',
           routingKey: 'new-comments',
           payload: JSON.stringify(comments || []),
-          timeout: 10000,
+          timeout: AMQP_TIMEOUT,
       });
 
       this.logger.log(res);

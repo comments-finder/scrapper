@@ -1,6 +1,8 @@
 import {Inject, Module} from '@nestjs/common';
 import puppeteer from 'puppeteer-extra';
 import {Browser, executablePath} from 'puppeteer';
+import {ZENROWS_KEY} from "../config";
+
 const StealthPlugin = require('puppeteer-extra-plugin-stealth')
 
 export const BROWSER = 'browser';
@@ -37,7 +39,7 @@ export const BROWSER = 'browser';
 
           return Object.assign(page, {
             goto: async (url: string) => {
-              await gotoOrig.call(page, `https://api.zenrows.com/v1/?apikey=6556ac0bcde9434cc31be4153e26e2a22482ceb7&url=${encodeURIComponent(url)}`);
+              await gotoOrig.call(page, `https://api.zenrows.com/v1/?apikey=${ZENROWS_KEY}&url=${encodeURIComponent(url)}`);
 
               const pre = await page.$('pre');
 

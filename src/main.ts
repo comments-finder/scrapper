@@ -5,6 +5,9 @@ import {MicroserviceOptions, Transport} from "@nestjs/microservices";
 async function bootstrap() {
   const app = await NestFactory.createMicroservice<MicroserviceOptions>(
       AppModule,
+      {
+          logger: process.env.NODE_ENV === 'development' ? ['log', 'debug', 'error', 'verbose', 'warn'] : ['error', 'warn'],
+      }
   );
 
   app.enableShutdownHooks();

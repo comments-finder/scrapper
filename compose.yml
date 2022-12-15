@@ -46,25 +46,30 @@ services:
       - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
     networks:
       - db
-#  scrapper:
-#    container_name: scrapper_server
-#    init: true
-#    ports:
-#      - "3000:3000"
-#    build:
-#      context: .
-#    environment:
-#      - DB_URI=mongodb://scrapper:123456@db:27017/scrapper
-#    depends_on:
-#      - db
-#      - rabbitmq
-#    networks:
-#      - rabbitmq
-#      - db
+  scrapper:
+    container_name: scrapper_server
+    init: true
+    ports:
+      - "3000:3000"
+    build:
+      context: .
+    environment:
+      - DB_URI=mongodb://scrapper:123456@db:27017/scrapper
+      - RABBITMQ_URI=amqp://rabbitmq:5672
+      - NODE_ENV=development
+    depends_on:
+      - db
+      - rabbitmq
+    networks:
+      - rabbitmq
+      - db
   search:
     container_name: search_server
     build:
       context: ../search
+    environment:
+      - RABBITMQ_URI=amqp://rabbitmq:5672
+      - NODE_ENV=development
     depends_on:
       - rabbitmq
       - elasticsearch
