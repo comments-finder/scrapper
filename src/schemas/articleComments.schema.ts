@@ -1,15 +1,19 @@
-import {HydratedDocument} from "mongoose";
-import {Prop, Schema, SchemaFactory} from "@nestjs/mongoose";
+import { HydratedDocument } from 'mongoose';
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 
 export type ArticleCommentDocument = HydratedDocument<ArticleComment>;
 
 @Schema()
 export class ArticleComment {
-    @Prop()
-    articleLink: string;
+  @Prop()
+  articleLink: string;
 
-    @Prop({ type: String, unique: true })
-    text: string;
+  @Prop()
+  articleTitle: string;
+
+  @Prop({ type: String, unique: true })
+  text: string;
 }
 
-export const ArticleCommentSchema = SchemaFactory.createForClass(ArticleComment);
+export const ArticleCommentSchema =
+  SchemaFactory.createForClass(ArticleComment);

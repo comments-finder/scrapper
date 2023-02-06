@@ -57,6 +57,7 @@ services:
       - DB_URI=mongodb://scrapper:123456@db:27017/scrapper
       - RABBITMQ_URI=amqp://rabbitmq:5672
       - NODE_ENV=development
+      - ZENROWS_KEY=7c97c5db2cd29aadcbd774dd72d610cf274385e9
     depends_on:
       - db
       - rabbitmq
@@ -65,11 +66,14 @@ services:
       - db
   search:
     container_name: search_server
+    ports:
+      - "3333:3333"
     build:
       context: ../search
     environment:
       - RABBITMQ_URI=amqp://rabbitmq:5672
       - NODE_ENV=development
+      - PORT=3333
     depends_on:
       - rabbitmq
       - elasticsearch
