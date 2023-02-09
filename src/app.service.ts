@@ -8,7 +8,7 @@ import {
 import { DouParserService } from './parsers/dou.service';
 import { Cron } from '@nestjs/schedule';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
-import { AMQP_TIMEOUT } from './config';
+import { AMQP_TIMEOUT, CRON } from './config';
 import { ArticleLinks } from './parsers/types';
 
 interface ArticleComments {
@@ -141,7 +141,7 @@ export class AppService {
     return await this.getDouArticlesCommentsConsec(articlesLinks);
   }
 
-  @Cron('*/1 * * * *')
+  @Cron(CRON)
   async parse() {
     try {
       if (this.inProgress) {
@@ -194,6 +194,7 @@ export class AppService {
 
   async onApplicationBootstrap() {
     try {
+      await this.parse();
       await this.sendAllComments();
     } catch (e) {
       this.logger.error(e, e.stack);

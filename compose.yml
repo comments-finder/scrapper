@@ -50,14 +50,14 @@ services:
     container_name: scrapper_server
     init: true
     ports:
-      - "3000:3000"
+      - '3000:3000'
     build:
       context: .
     environment:
       - DB_URI=mongodb://scrapper:123456@db:27017/scrapper
       - RABBITMQ_URI=amqp://rabbitmq:5672
       - NODE_ENV=development
-      - ZENROWS_KEY=7c97c5db2cd29aadcbd774dd72d610cf274385e9
+      - ZENROWS_KEY=84217c18a2bfca2a4be2dde6c2b1b707486f8dcc
     depends_on:
       - db
       - rabbitmq
@@ -67,7 +67,7 @@ services:
   search:
     container_name: search_server
     ports:
-      - "3333:3333"
+      - '3333:3333'
     build:
       context: ../search
     environment:
