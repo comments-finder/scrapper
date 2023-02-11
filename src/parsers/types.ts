@@ -7,8 +7,13 @@ export type ArticleLinks = {
   title: string;
 };
 
+export type Comment = {
+  text: string;
+  publicationDate: Date;
+};
+
 export abstract class Parser {
   constructor(@Inject(BROWSER) protected readonly browser: Browser) {}
-  abstract getArticleComments(articleLink: string): Promise<string[]>;
+  abstract getArticleComments(articleLink: string): Promise<Comment[]>;
   abstract getArticlesLinks(): Promise<ArticleLinks[]>;
 }

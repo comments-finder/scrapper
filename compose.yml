@@ -53,23 +53,28 @@ services:
       - '3000:3000'
     build:
       context: .
+    command: npm run start:dev
     environment:
       - DB_URI=mongodb://scrapper:123456@db:27017/scrapper
       - RABBITMQ_URI=amqp://rabbitmq:5672
       - NODE_ENV=development
-      - ZENROWS_KEY=84217c18a2bfca2a4be2dde6c2b1b707486f8dcc
+      - ZENROWS_KEY=1abb2a8ab8b7fe91d6057b9ee1a3ccdde71a3ae2
     depends_on:
       - db
       - rabbitmq
     networks:
       - rabbitmq
       - db
+    volumes:
+      - ./:/usr/src/app
+      - nodemodules_scrapper:/usr/src/app/node_modules
   search:
     container_name: search_server
     ports:
       - '3333:3333'
     build:
       context: ../search
+    command: npm run start:dev
     environment:
       - RABBITMQ_URI=amqp://rabbitmq:5672
       - NODE_ENV=development
@@ -81,12 +86,15 @@ services:
     networks:
       - rabbitmq
       - elasticsearch
+    volumes:
+      - ../search:/usr/src/app
 
 volumes:
   mongodb_data_container:
   rabbitmq_persistence_data:
   rabbitmq_persistence_log:
   elasticsearch_data:
+  nodemodules_scrapper:
 
 networks:
   db:

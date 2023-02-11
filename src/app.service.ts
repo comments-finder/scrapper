@@ -9,16 +9,16 @@ import { DouParserService } from './parsers/dou.service';
 import { Cron } from '@nestjs/schedule';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { AMQP_TIMEOUT, CRON } from './config';
-import { ArticleLinks } from './parsers/types';
+import { ArticleLinks, Comment } from './parsers/types';
 
 interface ArticleComments {
   articleLink: string;
   articleTitle: string;
-  comments: string[];
+  comments: Comment[];
 }
 
 interface ArticleCommentsResult {
-  comments: ArticleComments[];
+  articles: ArticleComments[];
   errors: Error[];
 }
 
@@ -40,7 +40,7 @@ export class AppService {
   ): ArticleCommentsResult {
     const errors = [];
 
-    const comments = articlesCommentsResults.reduce((prev, next, index) => {
+    const articles = articlesCommentsResults.reduce((prev, next, index) => {
       const articleLink = articlesLinks[index];
 
       if (next.status === 'fulfilled') {
@@ -54,7 +54,7 @@ export class AppService {
       return prev;
     }, []);
 
-    return { errors, comments };
+    return { errors, articles };
   }
 
   private async getDouArticlesCommentsInParallel(
@@ -76,7 +76,7 @@ export class AppService {
   private async getDouArticlesCommentsConsec(
     articlesLinks: ArticleLinks[],
   ): Promise<ArticleCommentsResult> {
-    const comments: ArticleComments[] = [];
+    const articles: ArticleComments[] = [];
     const errors = [];
 
     for (const articlesLink of articlesLinks) {
@@ -85,7 +85,7 @@ export class AppService {
           articlesLink.link,
         );
 
-        comments.push({
+        articles.push({
           articleLink: articlesLink.link,
           articleTitle: articlesLink.title,
           comments: res,
@@ -95,17 +95,18 @@ export class AppService {
       }
     }
 
-    return { comments, errors };
+    return { articles, errors };
   }
 
   private mapArticleCommentsToDTOs(
     articlesComments: ArticleComments[],
   ): ArticleComment[] {
     return articlesComments.flatMap((articleComments) =>
-      articleComments.comments.map((comment) => ({
-        text: comment,
+      articleComments.comments.map(({ text, publicationDate }) => ({
+        text,
         articleLink: articleComments.articleLink,
         articleTitle: articleComments.articleTitle,
+        publicationDate,
       })),
     );
   }
@@ -152,16 +153,26 @@ export class AppService {
 
       this.inProgress = true;
 
-      const { errors, comments } = await this.getDouArticlesComments();
+      const { errors, articles } = await this.getDouArticlesComments();
+
+      const commentsLength = articles.reduce(
+        (prev, { comments }) => prev + comments.length,
+        0,
+      );
 
       this.logger.log(
         `Failed to fetch comments from ${errors?.length} articles`,
       );
-      this.logger.log(`Fetched comments from ${comments?.length} articles`);
+
+      this.logger.log(
+        `Fetched ${commentsLength} comments from ${articles?.length} articles`,
+      );
+
+      this.logger.debug(errors);
 
       this.inProgress = false;
 
-      const insertedDocsResult = await this.saveComments(comments);
+      const insertedDocsResult = await this.saveComments(articles);
 
       if (!insertedDocsResult.length) return;
 

@@ -13,6 +13,9 @@ export class ArticleComment {
 
   @Prop({ type: String, unique: true })
   text: string;
+
+  @Prop({ type: Date })
+  publicationDate: Date;
 }
 
 export const ArticleCommentSchema =
