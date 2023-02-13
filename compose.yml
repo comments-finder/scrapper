@@ -86,8 +86,28 @@ services:
     networks:
       - rabbitmq
       - elasticsearch
+      - search
     volumes:
       - ../search:/usr/src/app
+      - nodemodules_search:/usr/src/app/node_modules
+  search-ui:
+    container_name: search_ui
+    ports:
+      - '1000:1000'
+    build:
+      context: ../search-ui
+    command: npm run dev
+    links:
+      - 'search'
+    environment:
+      - SEARCH_URL=http://search:3333
+    networks:
+      - rabbitmq
+      - elasticsearch
+      - search
+    volumes:
+      - ../search-ui:/usr/src/app
+      - nodemodules_search_ui:/usr/src/app/node_modules
 
 volumes:
   mongodb_data_container:
@@ -95,6 +115,8 @@ volumes:
   rabbitmq_persistence_log:
   elasticsearch_data:
   nodemodules_scrapper:
+  nodemodules_search:
+  nodemodules_search_ui:
 
 networks:
   db:
@@ -103,3 +125,6 @@ networks:
     driver: bridge
   elasticsearch:
     driver: bridge
+  search:
+    driver: bridge
+

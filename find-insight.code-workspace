@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "./"
+		},
+		{
+			"path": "../search-ui"
+		},
+		{
+			"path": "../search"
+		}
+	],
+	"settings": {}
+}

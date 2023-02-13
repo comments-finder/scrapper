@@ -21,7 +21,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "docker-build": "docker build . -t parser/scrapper",
     "docker-run": "docker run -d parser/scrapper",
-    "docker-compose-run": "docker-compose up --remove-orphans --build scrapper search"
+    "docker-compose-run": "docker-compose up --remove-orphans --build scrapper search search-ui"
   },
   "dependencies": {
     "@golevelup/nestjs-rabbitmq": "^3.4.0",
