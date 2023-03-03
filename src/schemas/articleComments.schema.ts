@@ -6,6 +6,9 @@ export type ArticleCommentDocument = HydratedDocument<ArticleComment>;
 @Schema()
 export class ArticleComment {
   @Prop()
+  source: string;
+
+  @Prop()
   articleLink: string;
 
   @Prop()

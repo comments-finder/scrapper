@@ -9,18 +9,8 @@ import { DouParserService } from './parsers/dou.service';
 import { Cron } from '@nestjs/schedule';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { AMQP_TIMEOUT, CRON } from './config';
-import { ArticleLinks, Comment } from './parsers/types';
-
-interface ArticleComments {
-  articleLink: string;
-  articleTitle: string;
-  comments: Comment[];
-}
-
-interface ArticleCommentsResult {
-  articles: ArticleComments[];
-  errors: Error[];
-}
+import { ArticleLinks } from './parsers/types';
+import { ArticleComments, ArticleCommentsResult } from './types';
 
 @Injectable()
 export class AppService {
@@ -89,6 +79,7 @@ export class AppService {
           articleLink: articlesLink.link,
           articleTitle: articlesLink.title,
           comments: res,
+          source: 'dou',
         });
       } catch (e) {
         errors.push(e);
@@ -101,13 +92,15 @@ export class AppService {
   private mapArticleCommentsToDTOs(
     articlesComments: ArticleComments[],
   ): ArticleComment[] {
-    return articlesComments.flatMap((articleComments) =>
-      articleComments.comments.map(({ text, publicationDate }) => ({
-        text,
-        articleLink: articleComments.articleLink,
-        articleTitle: articleComments.articleTitle,
-        publicationDate,
-      })),
+    return articlesComments.flatMap(
+      ({ comments, articleLink, articleTitle, source }) =>
+        comments.map(({ text, publicationDate }) => ({
+          text,
+          articleLink: articleLink,
+          articleTitle: articleTitle,
+          publicationDate,
+          source,
+        })),
     );
   }
 
@@ -169,6 +162,7 @@ export class AppService {
       );
 
       this.logger.debug(errors);
+      this.logger.debug(errors[0].stack);
 
       this.inProgress = false;
 
@@ -205,8 +199,8 @@ export class AppService {
 
   async onApplicationBootstrap() {
     try {
+      // await this.sendAllComments();
       await this.parse();
-      await this.sendAllComments();
     } catch (e) {
       this.logger.error(e, e.stack);
     }
