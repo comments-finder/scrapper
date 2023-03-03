@@ -21,6 +21,18 @@ services:
       - elasticsearch
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.5.2 
+    container_name: kibana
+    ports:
+      - 5601:5601
+    networks:
+      - elasticsearch
+    environment:
+      ELASTICSEARCH_HOSTS: '["http://elasticsearch:9200"]'
+    depends_on:
+      - elasticsearch
+
   rabbitmq:
     image: rabbitmq:3-management-alpine
     container_name: 'rabbitmq'
@@ -58,7 +70,7 @@ services:
       - DB_URI=mongodb://scrapper:123456@db:27017/scrapper
       - RABBITMQ_URI=amqp://rabbitmq:5672
       - NODE_ENV=development
-      - ZENROWS_KEY=1abb2a8ab8b7fe91d6057b9ee1a3ccdde71a3ae2
+      - ZENROWS_KEY=e128a5750d40800067a102807147ee3a01c7784a
     depends_on:
       - db
       - rabbitmq
@@ -77,6 +89,7 @@ services:
     command: npm run start:dev
     environment:
       - RABBITMQ_URI=amqp://rabbitmq:5672
+      - ELASTICSEARCH_URI=http://elasticsearch:9200
       - NODE_ENV=development
       - PORT=3333
     depends_on:
