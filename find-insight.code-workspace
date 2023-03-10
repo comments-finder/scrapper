@@ -8,6 +8,9 @@
 		},
 		{
 			"path": "../search"
+		},
+		{
+			"path": "../terraform"
 		}
 	],
 	"settings": {}
