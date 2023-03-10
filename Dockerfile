@@ -1,4 +1,21 @@
-FROM node:18-alpine AS scrapper
+FROM node:18-alpine AS builder
+
+WORKDIR /usr/src/app
+
+COPY . .
+
+RUN npm ci
+RUN npm run build
+RUN rm -rf ./node_modules && npm cache clean --force
+
+RUN npm ci --omit=dev
+RUN rm -rf ./package-lock.json && npm cache clean --force
+
+FROM node:18-alpine AS prod
+
+WORKDIR /usr/src/app
+
+COPY --from=builder /usr/src/app ./
 
 RUN apk add --no-cache \
       chromium \
@@ -11,13 +28,8 @@ RUN apk add --no-cache \
       yarn
 
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser \
+    NODE_ENV=production
 
-
-WORKDIR /usr/src/app
-COPY package*.json ./
-RUN npm ci
-COPY . .
-
-EXPOSE 3000
-CMD [ "npm", "start" ]
+RUN chmod +x ./start.sh
+CMD ["./start.sh"]

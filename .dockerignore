@@ -1,2 +1,9 @@
-node_modules
-npm-debug.log
+*
+
+!src/**
+!.npmrc
+!nest-cli.json
+!package*.json
+!server.js
+!tsconfig*
+!start.sh
