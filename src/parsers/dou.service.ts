@@ -33,10 +33,11 @@ export class DouParserService extends Parser {
 
       const comments = res.map((comment) => ({
         ...comment,
-        publicationDate: moment(
-          comment.publicationDate,
-          'DD.MM.YYYY hh:mm',
-        ).toDate(),
+        publicationDate: moment(comment.publicationDate, 'DD.MM.YYYY hh:mm')
+          // Set Ukraine timezone
+          .utcOffset(120, true)
+          .utc()
+          .toDate(),
       }));
 
       await page.close();
