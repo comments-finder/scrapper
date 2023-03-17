@@ -70,7 +70,7 @@ services:
       - DB_URI=mongodb://scrapper:123456@db:27017/scrapper
       - RABBITMQ_URI=amqp://rabbitmq:5672
       - NODE_ENV=development
-      - ZENROWS_KEY=e128a5750d40800067a102807147ee3a01c7784a
+      - ZENROWS_KEY=042572b0dad995a60dd8be884ec746290fa7d10c
     depends_on:
       - db
       - rabbitmq
