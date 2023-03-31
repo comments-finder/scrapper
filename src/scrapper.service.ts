@@ -13,9 +13,9 @@ import { ArticleLinks } from './parsers/types';
 import { ArticleComments, ArticleCommentsResult } from './types';
 
 @Injectable()
-export class AppService {
+export class ScrapperService {
   private inProgress = false;
-  private readonly logger = new Logger(AppService.name);
+  private readonly logger = new Logger(ScrapperService.name);
 
   constructor(
     private readonly douParserService: DouParserService,
