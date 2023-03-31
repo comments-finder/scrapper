@@ -1,6 +1,6 @@
 {
   "name": "scrapper",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "",
   "author": "",
   "private": true,
@@ -21,7 +21,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "docker-build": "docker build . -t parser/scrapper",
     "docker-run": "docker run -d parser/scrapper",
-    "docker-compose-run": "docker-compose up --remove-orphans --build search scrapper elasticsearch rabbitmq db",
+    "docker-compose-run": "docker-compose up --remove-orphans --build search elasticsearch rabbitmq db",
     "typecheck": "tsc"
   },
   "dependencies": {
